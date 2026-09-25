@@ -15,7 +15,7 @@ const AdminDashboard = () => {
   const [editForm, setEditForm] = useState({});
 
   // KPIs
-  const totalSales = orders.filter(o => o.estado === 'PAGADA').reduce((sum, o) => sum + o.total, 0);
+  const totalSales = orders.filter(o => o.estado === 'PAGADA').reduce((sum, o) => sum + (Number(o.total) || 0), 0);
   const criticalCount = products.filter(p => p.stock_sales_floor === 0).length;
   const warningCount = products.filter(p => p.stock_sales_floor > 0 && p.stock_sales_floor <= p.min_stock_alert).length;
 
@@ -23,9 +23,9 @@ const AdminDashboard = () => {
   const salesBySeller = orders.filter(o => o.estado === 'PAGADA').reduce((acc, order) => {
     const existing = acc.find(x => x.name === order.nombre_vendedora);
     if (existing) {
-      existing.ventas += order.total;
+      existing.ventas += (Number(order.total) || 0);
     } else {
-      acc.push({ name: order.nombre_vendedora, ventas: order.total });
+      acc.push({ name: order.nombre_vendedora || 'Desconocido', ventas: (Number(order.total) || 0) });
     }
     return acc;
   }, []);
