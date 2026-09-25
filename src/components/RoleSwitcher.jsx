@@ -1,15 +1,24 @@
 import React from 'react';
 import { useStore } from '../context/StoreContext';
+import { supabase } from '../lib/supabase';
 
 export const TopHeader = () => {
   const { currentRole, setCurrentRole } = useStore();
 
   const roles = [
-    { id: 'SELLER', label: 'Vendedora' },
-    { id: 'MANAGER', label: 'Encargado' },
-    { id: 'CASHIER', label: 'Cajera' },
-    { id: 'ADMIN', label: 'Gerente' },
+    { id: 'SELLER', label: 'Ventas' },
+    { id: 'MANAGER', label: 'Almacén' },
+    { id: 'CASHIER', label: 'Caja' },
+    { id: 'ADMIN', label: 'Gerencia' },
   ];
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
 
   return (
     <header className="fixed top-0 w-full z-50 bg-neutral-charcoal text-white shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
@@ -34,9 +43,16 @@ export const TopHeader = () => {
           ))}
         </nav>
         <div className="flex items-center gap-space-sm">
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-            <span className="material-symbols-outlined text-on-primary text-[18px]">person</span>
-          </div>
+          <button 
+            onClick={handleLogout}
+            title="Cerrar sesión"
+            className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-transparent hover:border-neutral-border/30 transition-colors group cursor-pointer"
+          >
+            <span className="text-body-sm font-bold text-white group-hover:text-brand-red hidden sm:block transition-colors">Salir</span>
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center group-hover:bg-brand-red transition-colors">
+              <span className="material-symbols-outlined text-on-primary text-[18px]">logout</span>
+            </div>
+          </button>
         </div>
       </div>
     </header>
@@ -47,10 +63,10 @@ export const BottomNav = () => {
   const { currentRole, setCurrentRole } = useStore();
   
   const roles = [
-    { id: 'SELLER', label: 'Vendedora', icon: 'storefront' },
-    { id: 'MANAGER', label: 'Encargado', icon: 'inventory_2' },
-    { id: 'CASHIER', label: 'Cajera', icon: 'point_of_sale' },
-    { id: 'ADMIN', label: 'Gerente', icon: 'analytics' },
+    { id: 'SELLER', label: 'Ventas', icon: 'storefront' },
+    { id: 'MANAGER', label: 'Almacén', icon: 'inventory_2' },
+    { id: 'CASHIER', label: 'Caja', icon: 'point_of_sale' },
+    { id: 'ADMIN', label: 'Gerencia', icon: 'analytics' },
   ];
 
   return (

@@ -7,6 +7,7 @@ import {
 import Papa from 'papaparse';
 import { Upload, TrendingUp, AlertOctagon, DollarSign, Edit, Trash2, Save, X } from 'lucide-react';
 import TrafficLight from '../components/TrafficLight';
+import WorkersManagement from '../components/WorkersManagement';
 
 const AdminDashboard = () => {
   const { products, orders, importProducts, updateProduct, deleteProduct } = useStore();
@@ -15,10 +16,10 @@ const AdminDashboard = () => {
 
   // KPIs
   const totalSales = orders.filter(o => o.estado === 'PAGADA').reduce((sum, o) => sum + o.total, 0);
-  const criticalCount = products.filter(p => p.stock_piso === 0).length;
-  const warningCount = products.filter(p => p.stock_piso > 0 && p.stock_piso <= p.stock_minimo).length;
+  const criticalCount = products.filter(p => p.stock_sales_floor === 0).length;
+  const warningCount = products.filter(p => p.stock_sales_floor > 0 && p.stock_sales_floor <= p.min_stock_alert).length;
 
-  // Chart Data: Ventas por Vendedora
+  // Chart Data: Ventas por Vendedor/a
   const salesBySeller = orders.filter(o => o.estado === 'PAGADA').reduce((acc, order) => {
     const existing = acc.find(x => x.name === order.nombre_vendedora);
     if (existing) {
@@ -32,8 +33,8 @@ const AdminDashboard = () => {
   // Chart Data: Stock Distribution
   const stockCategories = products.reduce((acc, p) => {
     let cat = 'Suficiente';
-    if (p.stock_piso === 0) cat = 'Agotado';
-    else if (p.stock_piso <= p.stock_minimo) cat = 'Alerta';
+    if (p.stock_sales_floor === 0) cat = 'Agotado';
+    else if (p.stock_sales_floor <= p.min_stock_alert) cat = 'Alerta';
     
     const existing = acc.find(x => x.name === cat);
     if (existing) {
@@ -53,15 +54,14 @@ const AdminDashboard = () => {
           const newProds = results.data
             .filter(r => r.codigo_barras)
             .map(r => ({
-              codigo_barras: r.codigo_barras,
-              sku: r.sku || '',
-              nombre: r.nombre || 'Producto Importado',
-              categoria: r.categoria || 'General',
-              ubicacion: { pasillo: r.pasillo || 'A', gaveta: r.gaveta || '1' },
-              stock_almacen: Number(r.stock_almacen) || 0,
-              stock_piso: Number(r.stock_piso) || 0,
-              stock_minimo: Number(r.stock_minimo) || 5,
-              precio: Number(r.precio) || 0
+              sku: r.codigo_barras || r.sku || '',
+              name: r.nombre || 'Producto Importado',
+              description: r.categoria || 'General',
+              stock_warehouse: Number(r.stock_almacen) || 0,
+              stock_sales_floor: Number(r.stock_piso) || 0,
+              min_stock_alert: Number(r.stock_minimo) || 5,
+              price: Number(r.precio) || 0,
+              cost: Number(r.cost) || 0
             }));
           if (newProds.length > 0) {
             importProducts(newProds);
@@ -80,10 +80,10 @@ const AdminDashboard = () => {
   const handleEditSave = () => {
     updateProduct(editingId, {
       ...editForm,
-      precio: Number(editForm.precio),
-      stock_piso: Number(editForm.stock_piso),
-      stock_almacen: Number(editForm.stock_almacen),
-      stock_minimo: Number(editForm.stock_minimo)
+      price: Number(editForm.price),
+      stock_sales_floor: Number(editForm.stock_sales_floor),
+      stock_warehouse: Number(editForm.stock_warehouse),
+      min_stock_alert: Number(editForm.min_stock_alert)
     });
     setEditingId(null);
   };
@@ -135,7 +135,7 @@ const AdminDashboard = () => {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-2xl border shadow-sm">
-          <h3 className="font-bold text-gray-800 mb-6">Ventas por Vendedora</h3>
+          <h3 className="font-bold text-gray-800 mb-6">Ventas por Vendedor/a</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={salesBySeller.length ? salesBySeller : [{ name: 'Sin datos', ventas: 0 }]}>
@@ -185,39 +185,39 @@ const AdminDashboard = () => {
               {products.map(p => (
                 <tr key={p.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <TrafficLight stockPiso={p.stock_piso} stockMinimo={p.stock_minimo} />
+                    <TrafficLight stockPiso={p.stock_sales_floor} stockMinimo={p.min_stock_alert} />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.codigo_barras}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.sku}</td>
                   <td className="px-6 py-4">
                     {editingId === p.id ? (
                       <input 
                         className="border p-1 w-full text-sm" 
-                        value={editForm.nombre} 
-                        onChange={e => setEditForm({...editForm, nombre: e.target.value})}
+                        value={editForm.name} 
+                        onChange={e => setEditForm({...editForm, name: e.target.value})}
                       />
                     ) : (
-                      <span className="text-sm font-medium text-gray-900">{p.nombre}</span>
+                      <span className="text-sm font-medium text-gray-900">{p.name}</span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {editingId === p.id ? (
                       <input 
                         type="number" className="border p-1 w-20 text-sm" 
-                        value={editForm.precio} 
-                        onChange={e => setEditForm({...editForm, precio: e.target.value})}
+                        value={editForm.price} 
+                        onChange={e => setEditForm({...editForm, price: e.target.value})}
                       />
                     ) : (
-                      <span className="text-sm text-gray-900">${p.precio.toFixed(2)}</span>
+                      <span className="text-sm text-gray-900">${(p.price || 0).toFixed(2)}</span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {editingId === p.id ? (
                       <div className="flex space-x-2">
-                        <input type="number" className="border p-1 w-16 text-sm" placeholder="Piso" value={editForm.stock_piso} onChange={e => setEditForm({...editForm, stock_piso: e.target.value})} />
-                        <input type="number" className="border p-1 w-16 text-sm" placeholder="Almacén" value={editForm.stock_almacen} onChange={e => setEditForm({...editForm, stock_almacen: e.target.value})} />
+                        <input type="number" className="border p-1 w-16 text-sm" placeholder="Piso" value={editForm.stock_sales_floor} onChange={e => setEditForm({...editForm, stock_sales_floor: e.target.value})} />
+                        <input type="number" className="border p-1 w-16 text-sm" placeholder="Almacén" value={editForm.stock_warehouse} onChange={e => setEditForm({...editForm, stock_warehouse: e.target.value})} />
                       </div>
                     ) : (
-                      <span className="text-sm text-gray-900 font-bold">{p.stock_piso} <span className="text-gray-400 font-normal">/ {p.stock_almacen}</span></span>
+                      <span className="text-sm text-gray-900 font-bold">{p.stock_sales_floor} <span className="text-gray-400 font-normal">/ {p.stock_warehouse}</span></span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -238,6 +238,11 @@ const AdminDashboard = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Trabajadores */}
+      <div className="mt-8">
+        <WorkersManagement />
       </div>
     </div>
   );

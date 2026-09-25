@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
+import AddProductForm from '../components/AddProductForm';
+import AddEmployeeForm from '../components/AddEmployeeForm';
 
 const ManagerView = () => {
   const { products, replenishStock } = useStore();
@@ -8,36 +10,53 @@ const ManagerView = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [transferAmount, setTransferAmount] = useState(10);
   const [selectedItems, setSelectedItems] = useState([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [showAddEmployeeForm, setShowAddEmployeeForm] = useState(false);
 
   const getStatus = (stock, min) => {
-    if (stock === 0) return 'critical';
+    if (stock <= 0) return 'critical';
     if (stock <= min) return 'warning';
     return 'ok';
   };
 
   const filteredProducts = products.filter(p => {
-    const status = getStatus(p.stock_piso, p.stock_minimo);
+    const status = getStatus(p.stock_sales_floor, 5); // Assuming 5 as minimum stock for alert
     if (filterPriority === 'critical' && status !== 'critical') return false;
     if (filterPriority === 'warning' && status !== 'warning') return false;
     
-    return p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-           p.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    return (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+           (p.sku || '').toLowerCase().includes(searchTerm.toLowerCase());
   }).sort((a, b) => {
-    const sA = getStatus(a.stock_piso, a.stock_minimo);
-    const sB = getStatus(b.stock_piso, b.stock_minimo);
+    const sA = getStatus(a.stock_sales_floor, 5);
+    const sB = getStatus(b.stock_sales_floor, 5);
     if (sA === 'critical' && sB !== 'critical') return -1;
     if (sB === 'critical' && sA !== 'critical') return 1;
     return 0;
   });
 
-  const criticalCount = products.filter(p => getStatus(p.stock_piso, p.stock_minimo) === 'critical').length;
-  const warningCount = products.filter(p => getStatus(p.stock_piso, p.stock_minimo) === 'warning').length;
+  const criticalCount = products.filter(p => getStatus(p.stock_sales_floor, 5) === 'critical').length;
+  const warningCount = products.filter(p => getStatus(p.stock_sales_floor, 5) === 'warning').length;
   const okCount = products.length - criticalCount - warningCount;
 
   const handleReplenish = () => {
     if (selectedProduct) {
       replenishStock(selectedProduct.id, Number(transferAmount));
       setSelectedProduct(null);
+    }
+  };
+
+  const handleMassReplenish = async () => {
+    if (selectedItems.length === 0) {
+      alert("Selecciona al menos un artículo para surtir.");
+      return;
+    }
+    const amount = prompt("Cantidad a transferir para CADA artículo seleccionado:", "10");
+    if (amount && !isNaN(amount) && Number(amount) > 0) {
+      for (const id of selectedItems) {
+        await replenishStock(id, Number(amount));
+      }
+      setSelectedItems([]);
+      alert("¡Surtido masivo completado!");
     }
   };
 
@@ -94,53 +113,100 @@ const ManagerView = () => {
             <option value="warning">Solo Alerta (Amarillo)</option>
           </select>
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-          <button className="w-full md:w-auto bg-primary text-on-primary hover:bg-brand-red-hover px-4 py-2 rounded-lg text-label-lg transition-all flex items-center justify-center gap-2 shadow-sm">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
+          <button 
+            onClick={() => { setShowAddForm(!showAddForm); setShowAddEmployeeForm(false); }}
+            className="w-full md:w-auto bg-surface-container-high text-on-surface hover:bg-neutral-border px-4 py-2 rounded-lg text-label-lg transition-all flex items-center justify-center gap-2 shadow-sm border border-neutral-border">
+            <span className="material-symbols-outlined text-[18px]">{showAddForm ? 'close' : 'add_box'}</span>
+            {showAddForm ? 'Cerrar Producto' : 'Nuevo Producto'}
+          </button>
+          <button 
+            onClick={() => { setShowAddEmployeeForm(!showAddEmployeeForm); setShowAddForm(false); }}
+            className="w-full md:w-auto bg-surface-container-high text-on-surface hover:bg-neutral-border px-4 py-2 rounded-lg text-label-lg transition-all flex items-center justify-center gap-2 shadow-sm border border-neutral-border">
+            <span className="material-symbols-outlined text-[18px]">{showAddEmployeeForm ? 'close' : 'person_add'}</span>
+            {showAddEmployeeForm ? 'Cerrar Empleado' : 'Registrar Empleado'}
+          </button>
+          <button 
+            onClick={handleMassReplenish}
+            className="w-full md:w-auto bg-primary text-on-primary hover:bg-brand-red-hover px-4 py-2 rounded-lg text-label-lg transition-all flex items-center justify-center gap-2 shadow-sm"
+          >
             <span className="material-symbols-outlined text-[18px]">playlist_add</span>
             Surtir Selección Masiva
           </button>
         </div>
       </div>
 
+      {/* Add Product Form Section */}
+      {showAddForm && (
+        <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
+          <AddProductForm onProductAdded={() => setShowAddForm(false)} />
+        </div>
+      )}
+
+      {/* Add Employee Form Section */}
+      {showAddEmployeeForm && (
+        <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-300">
+          <AddEmployeeForm onEmployeeAdded={() => setShowAddEmployeeForm(false)} />
+        </div>
+      )}
+
       {/* Pick-List Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredProducts.map(p => {
-          const status = getStatus(p.stock_piso, p.stock_minimo);
+          const status = getStatus(p.stock_sales_floor, 5);
           if (status === 'ok') return null; // We typically don't pick-list OK items unless searched
 
           const isCritical = status === 'critical';
-          const colorClass = isCritical ? 'traffic-red' : 'traffic-yellow';
           const titleLabel = isCritical ? 'QUIEBRE CRÍTICO' : 'ALERTA REPOSICIÓN';
+
+          // Use full class names for Tailwind purge compatibility
+          const sideBarColor = isCritical ? 'bg-traffic-red' : 'bg-traffic-yellow';
+          const badgeBg = isCritical ? 'bg-traffic-red-bg' : 'bg-traffic-yellow-bg';
+          const badgeText = isCritical ? 'text-traffic-red' : 'text-traffic-yellow';
+          const badgeBorder = isCritical ? 'border-traffic-red-border' : 'border-traffic-yellow-border';
+          const dotBg = isCritical ? 'bg-traffic-red' : 'bg-traffic-yellow';
+          const stockTextColor = isCritical ? 'text-traffic-red' : 'text-traffic-yellow';
 
           return (
             <div key={p.id} className={`bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col justify-between border border-neutral-border relative group hover:shadow-md transition-all`}>
-              <div className={`absolute left-0 top-0 bottom-0 w-1.5 bg-${colorClass}`}></div>
+              <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${sideBarColor}`}></div>
               <div className="p-5 flex-1 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className={`px-2.5 py-0.5 rounded-full text-label-sm font-bold bg-${colorClass}-bg text-${colorClass} border border-${colorClass}-border flex items-center gap-1.5`}>
-                      <span className={`w-1.5 h-1.5 rounded-full bg-${colorClass} ${isCritical ? 'animate-ping' : ''}`}></span> {titleLabel}
+                    <span className={`px-2.5 py-0.5 rounded-full text-label-sm font-bold ${badgeBg} ${badgeText} border ${badgeBorder} flex items-center gap-1.5`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${dotBg} ${isCritical ? 'animate-ping' : ''}`}></span> {titleLabel}
                     </span>
                     <span className="text-code-num text-on-surface-variant">SKU: {p.sku}</span>
                   </div>
-                  <h3 className="text-headline-md text-on-surface font-headline mb-1">{p.nombre}</h3>
+                  <h3 className="text-headline-md text-on-surface font-headline mb-1">{p.name}</h3>
                   
                   <div className="grid grid-cols-2 gap-2 bg-surface-container-low p-3 rounded-lg mb-4 text-body-sm mt-3">
                     <div>
-                      <span className="text-on-surface-variant block text-xs">Ubicación Física:</span>
+                      <span className="text-on-surface-variant block text-xs">Almacén:</span>
                       <span className="font-bold text-on-surface flex items-center gap-1 mt-0.5">
-                        <span className="material-symbols-outlined text-primary text-[16px]">location_on</span> Pasillo {p.ubicacion.pasillo} - Gav {p.ubicacion.gaveta}
+                        <span className="material-symbols-outlined text-primary text-[16px]">inventory_2</span> {p.stock_warehouse} disp.
                       </span>
                     </div>
                     <div>
                       <span className="text-on-surface-variant block text-xs">Stock / Mínimo:</span>
-                      <span className={`font-code-num text-${colorClass} font-bold text-base mt-0.5`}>{p.stock_piso} und | Mín: {p.stock_minimo}</span>
+                      <span className={`font-code-num ${stockTextColor} font-bold text-base mt-0.5`}>{p.stock_sales_floor} und | Mín: 5</span>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center justify-between pt-2">
                   <div className="flex items-center gap-2">
-                    <input type="checkbox" className="w-4 h-4 rounded border-neutral-border text-primary focus:ring-primary" />
+                    <input 
+                      type="checkbox" 
+                      checked={selectedItems.includes(p.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedItems([...selectedItems, p.id]);
+                        } else {
+                          setSelectedItems(selectedItems.filter(id => id !== p.id));
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-neutral-border text-primary focus:ring-primary" 
+                    />
                     <span className="text-body-sm text-on-surface-variant">Seleccionar</span>
                   </div>
                   <button 
@@ -176,15 +242,15 @@ const ManagerView = () => {
               <div className="bg-surface-container-low p-4 rounded-lg space-y-2">
                 <div className="flex justify-between text-body-sm">
                   <span className="text-on-surface-variant">Artículo:</span>
-                  <span className="font-bold text-on-surface">{selectedProduct.nombre}</span>
+                  <span className="font-bold text-on-surface">{selectedProduct.name}</span>
                 </div>
                 <div className="flex justify-between text-body-sm">
                   <span className="text-on-surface-variant">Destino en Piso:</span>
-                  <span className="font-bold text-primary">Pasillo {selectedProduct.ubicacion.pasillo} - Gav {selectedProduct.ubicacion.gaveta}</span>
+                  <span className="font-bold text-primary">Piso de Ventas</span>
                 </div>
                 <div className="flex justify-between text-body-sm">
                   <span className="text-on-surface-variant">Almacén Central:</span>
-                  <span className="font-bold text-on-surface">{selectedProduct.stock_almacen} disponibles</span>
+                  <span className="font-bold text-on-surface">{selectedProduct.stock_warehouse} disponibles</span>
                 </div>
               </div>
 
@@ -195,7 +261,7 @@ const ManagerView = () => {
                     type="number"
                     value={transferAmount}
                     onChange={(e) => setTransferAmount(e.target.value)}
-                    max={selectedProduct.stock_almacen}
+                    max={selectedProduct.stock_warehouse}
                     className="flex-1 bg-surface-container-low text-on-surface text-body-lg font-code-num rounded-lg px-4 py-2 border border-neutral-border focus:outline-none focus:ring-2 focus:ring-primary" 
                   />
                   <span className="text-body-md text-on-surface-variant font-bold">Und.</span>
@@ -212,7 +278,7 @@ const ManagerView = () => {
               </button>
               <button 
                 onClick={handleReplenish}
-                disabled={selectedProduct.stock_almacen === 0}
+                disabled={selectedProduct.stock_warehouse === 0}
                 className="bg-traffic-green text-on-primary hover:opacity-90 px-6 py-2 rounded-lg text-label-lg transition-all flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:grayscale"
               >
                 <span className="material-symbols-outlined text-[18px]">check_circle</span>

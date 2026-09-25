@@ -20,9 +20,9 @@ const SellerView = () => {
   ];
 
   const filteredProducts = products.filter(p => {
-    const matchesSearch = p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          p.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || p.categoria === categoryFilter;
+    const matchesSearch = (p.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          (p.sku || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || p.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
@@ -33,14 +33,14 @@ const SellerView = () => {
 
   const addToCart = (product) => {
     const currentQty = getCartQuantity(product.sku);
-    if (product.stock_piso - currentQty <= 0) return; 
+    if (product.stock_sales_floor - currentQty <= 0) return; 
 
     setCart(prev => {
       const existing = prev.find(item => item.sku === product.sku);
       if (existing) {
         return prev.map(item => item.sku === product.sku ? { ...item, cantidad: item.cantidad + 1 } : item);
       }
-      return [...prev, { sku: product.sku, nombre: product.nombre, cantidad: 1, precio_unitario: product.precio }];
+      return [...prev, { sku: product.sku, nombre: product.name, cantidad: 1, precio_unitario: product.price }];
     });
   };
 
@@ -54,7 +54,7 @@ const SellerView = () => {
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
-    const orderId = await createOrder(cart, total, 'Vendedora (Demo)');
+    const orderId = await createOrder(cart, total, 'Ventas Mostrador');
     if (orderId) {
       setGeneratedOrder(orderId);
       setCart([]);
@@ -151,20 +151,30 @@ const SellerView = () => {
 
             {/* Products List */}
             {filteredProducts.map(product => {
-              const effectiveStock = product.stock_piso - getCartQuantity(product.codigo_barras);
+              const effectiveStock = product.stock_sales_floor - getCartQuantity(product.sku);
               const isOutOfStock = effectiveStock <= 0;
-              let statusColor = 'traffic-green';
-              let statusLabel = 'ADECUADO';
-              let borderClass = 'border-traffic-green';
 
-              if (effectiveStock === 0) {
-                statusColor = 'traffic-red';
+              let statusLabel = 'ADECUADO';
+              let borderClass = 'border-l-green-500';
+              let badgeBg = 'bg-green-50';
+              let badgeBorder = 'border-green-300';
+              let badgeText = 'text-green-700';
+              let dotBg = 'bg-green-500';
+
+              if (effectiveStock <= 0) {
                 statusLabel = 'QUIEBRE CRÍTICO';
-                borderClass = 'border-traffic-red';
-              } else if (effectiveStock <= product.stock_minimo) {
-                statusColor = 'traffic-yellow';
+                borderClass = 'border-l-red-500';
+                badgeBg = 'bg-red-50';
+                badgeBorder = 'border-red-300';
+                badgeText = 'text-red-600';
+                dotBg = 'bg-red-500';
+              } else if (effectiveStock <= 5) {
                 statusLabel = 'ALERTA REPOSICIÓN';
-                borderClass = 'border-traffic-yellow';
+                borderClass = 'border-l-yellow-500';
+                badgeBg = 'bg-yellow-50';
+                badgeBorder = 'border-yellow-300';
+                badgeText = 'text-yellow-700';
+                dotBg = 'bg-yellow-500';
               }
 
               return (
@@ -176,16 +186,16 @@ const SellerView = () => {
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-code-num text-on-surface-variant">SKU: {product.sku}</span>
-                        <span className={`bg-${statusColor}-bg border border-${statusColor}-border text-${statusColor} text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1`}>
-                          <span className={`w-1.5 h-1.5 rounded-full bg-${statusColor} ${isOutOfStock ? 'animate-ping' : ''}`}></span> {statusLabel}
+                        <span className={`${badgeBg} border ${badgeBorder} ${badgeText} text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${dotBg} ${isOutOfStock ? 'animate-ping' : ''}`}></span> {statusLabel}
                         </span>
                       </div>
-                      <h3 className="text-body-lg font-headline text-on-surface font-semibold">{product.nombre}</h3>
-                      <p className="text-body-sm text-on-surface-variant">Loc: {product.ubicacion.pasillo}-{product.ubicacion.gaveta} | Piso: {effectiveStock}</p>
+                      <h3 className="text-body-lg font-headline text-on-surface font-semibold">{product.name}</h3>
+                      <p className="text-body-sm text-on-surface-variant">Piso: {effectiveStock} | Almacén: {product.stock_warehouse}</p>
                     </div>
                   </div>
                   <div className="flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto gap-2">
-                    <span className="text-headline-md text-on-surface font-bold">${product.precio.toFixed(2)}</span>
+                    <span className="text-headline-md text-on-surface font-bold">${product.price?.toFixed(2)}</span>
                     <button 
                       disabled={isOutOfStock}
                       onClick={() => addToCart(product)}
@@ -262,10 +272,10 @@ const SellerView = () => {
                       <div key={item.sku} className="flex items-center justify-between bg-surface-container-low p-3 rounded-lg">
                         <div className="flex flex-col">
                           <span className="text-body-md font-semibold text-on-surface line-clamp-1">{item.nombre}</span>
-                          <span className="text-body-sm text-on-surface-variant">{item.cantidad} und × ${item.precio_unitario.toFixed(2)}</span>
+                          <span className="text-body-sm text-on-surface-variant">{item.cantidad} und × ${(item.precio_unitario || 0).toFixed(2)}</span>
                         </div>
                         <div className="flex items-center gap-3">
-                          <span className="text-code-num font-bold text-on-surface">${(item.cantidad * item.precio_unitario).toFixed(2)}</span>
+                          <span className="text-code-num font-bold text-on-surface">${(item.cantidad * (item.precio_unitario || 0)).toFixed(2)}</span>
                           <button onClick={() => removeFromCart(item.sku)} className="text-secondary hover:text-error transition-colors">
                             <span className="material-symbols-outlined text-[18px]">delete</span>
                           </button>
