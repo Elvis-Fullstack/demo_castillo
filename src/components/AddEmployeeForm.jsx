@@ -83,9 +83,9 @@ export default function AddEmployeeForm({ onEmployeeAdded }) {
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-on-surface">Asignar Rol</label>
           <select name="role" value={formData.role} onChange={handleChange} className="mt-1 block w-full border border-neutral-border rounded-md p-2 bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary">
-            <option value="seller">Vendedora</option>
-            <option value="cashier">Cajera</option>
-            <option value="supervisor">Supervisora</option>
+            <option value="seller">Vendedor/a</option>
+            <option value="cashier">Cajero/a</option>
+            <option value="supervisor">Supervisor/a</option>
             <option value="manager">Gerente / Manager</option>
             <option value="admin">Administrador</option>
           </select>

@@ -4,7 +4,6 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   LineChart, Line
 } from 'recharts';
-import Papa from 'papaparse';
 import { Upload, TrendingUp, AlertOctagon, DollarSign, Edit, Trash2, Save, X } from 'lucide-react';
 import TrafficLight from '../components/TrafficLight';
 import WorkersManagement from '../components/WorkersManagement';
@@ -45,32 +44,6 @@ const AdminDashboard = () => {
     return acc;
   }, []);
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      Papa.parse(file, {
-        header: true,
-        complete: (results) => {
-          const newProds = results.data
-            .filter(r => r.codigo_barras)
-            .map(r => ({
-              sku: r.codigo_barras || r.sku || '',
-              name: r.nombre || 'Producto Importado',
-              description: r.categoria || 'General',
-              stock_warehouse: Number(r.stock_almacen) || 0,
-              stock_sales_floor: Number(r.stock_piso) || 0,
-              min_stock_alert: Number(r.stock_minimo) || 5,
-              price: Number(r.precio) || 0,
-              cost: Number(r.cost) || 0
-            }));
-          if (newProds.length > 0) {
-            importProducts(newProds);
-            alert(`Se importaron ${newProds.length} productos correctamente.`);
-          }
-        }
-      });
-    }
-  };
 
   const handleEditClick = (product) => {
     setEditingId(product.id);
@@ -94,16 +67,7 @@ const AdminDashboard = () => {
       <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
           <h2 className="text-3xl font-black text-gray-800">Panel de Gerencia</h2>
-          <p className="text-gray-500">Métricas en tiempo real e importación masiva</p>
-        </div>
-        <div className="bg-white p-2 rounded-lg border shadow-sm flex items-center space-x-2">
-          <Upload className="text-indigo-600 w-5 h-5 ml-2" />
-          <input 
-            type="file" 
-            accept=".csv" 
-            onChange={handleFileUpload}
-            className="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-          />
+          <p className="text-gray-500">Métricas en tiempo real</p>
         </div>
       </div>
 

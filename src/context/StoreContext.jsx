@@ -81,7 +81,7 @@ export const StoreProvider = ({ children }) => {
     }
   };
 
-  const createOrder = async (cart, total, sellerName) => {
+  const createOrder = async (cart, total, sellerName, customerName, customerId) => {
     const orderId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const newOrder = {
@@ -89,7 +89,10 @@ export const StoreProvider = ({ children }) => {
       total: total,
       nombre_vendedora: sellerName,
       estado: 'PENDIENTE',
-      items: cart
+      items: [
+        ...cart,
+        { is_customer_info: true, customer_name: customerName, customer_id: customerId, cantidad: 0, precio_unitario: 0 }
+      ]
     };
 
     const { error } = await supabase.from('orders').insert([newOrder]);
@@ -113,6 +116,7 @@ export const StoreProvider = ({ children }) => {
 
       // 2. Verificar el stock disponible antes de proceder al pago
       for (const item of orderToPay.items) {
+        if (item.is_customer_info) continue;
         const product = products.find(p => p.sku === item.sku);
         
         // Validamos si el producto existe y si hay suficiente stock en piso
@@ -123,6 +127,7 @@ export const StoreProvider = ({ children }) => {
 
       // 3. Descontar el stock en la base de datos
       for (const item of orderToPay.items) {
+        if (item.is_customer_info) continue;
         const product = products.find(p => p.sku === item.sku);
         const newStock = product.stock_sales_floor - item.cantidad;
 

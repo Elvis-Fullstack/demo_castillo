@@ -1,9 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { useStore } from '../context/StoreContext';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const CashierView = () => {
   const { orders, products, payOrder } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [pendingSearchTerm, setPendingSearchTerm] = useState('');
   const [currentOrder, setCurrentOrder] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('efectivo');
   const [cashGiven, setCashGiven] = useState('');
@@ -67,8 +70,30 @@ const CashierView = () => {
     setCashGiven('');
   };
 
-  const iva = currentOrder ? currentOrder.total * 0.16 : 0;
-  const subtotal = currentOrder ? currentOrder.total - iva : 0;
+  const downloadPDF = async () => {
+    const receiptElement = document.getElementById('receipt-content');
+    if (!receiptElement) return;
+
+    try {
+      const canvas = await html2canvas(receiptElement, { scale: 2 });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Factura_${currentOrder.id_orden}.pdf`);
+    } catch (error) {
+      console.error("Error al generar PDF:", error);
+      alert("Hubo un error al generar la factura PDF.");
+    }
+  };
+
   const total = currentOrder ? currentOrder.total : 0;
   
   const cashNum = parseFloat(cashGiven.replace(/,/g, '')) || 0;
@@ -176,6 +201,17 @@ const CashierView = () => {
                 <span className="text-body-xs text-secondary hidden sm:inline">Selecciona una orden para cargarla en caja</span>
               </div>
 
+              {/* Buscador de Órdenes Pendientes */}
+              <div className="relative mb-4">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-[20px]">search</span>
+                <input 
+                  className="w-full pl-10 pr-4 py-2 bg-surface text-on-surface text-body-md rounded-lg border border-neutral-border focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Buscar por nombre de cliente o cédula..."
+                  value={pendingSearchTerm}
+                  onChange={e => setPendingSearchTerm(e.target.value)}
+                />
+              </div>
+
               {orders.filter(o => o.estado === 'PENDIENTE').length === 0 ? (
                 <div className="py-6 text-center text-secondary bg-surface rounded-lg border border-dashed border-neutral-border">
                   <span className="material-symbols-outlined text-[32px] text-secondary mb-1">done_all</span>
@@ -185,6 +221,18 @@ const CashierView = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-56 overflow-y-auto pr-1">
                   {orders
                     .filter(o => o.estado === 'PENDIENTE')
+                    // Filtrado por cliente o cédula (leyendo el objeto incrustado)
+                    .filter(o => {
+                      if (!pendingSearchTerm) return true;
+                      const term = pendingSearchTerm.toLowerCase();
+                      const info = (o.items || []).find(i => i.is_customer_info);
+                      const cName = info ? info.customer_name : '';
+                      const cId = info ? info.customer_id : '';
+                      return (
+                        (cName || '').toLowerCase().includes(term) ||
+                        (cId || '').toLowerCase().includes(term)
+                      );
+                    })
                     .sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0))
                     .map((order) => {
                       const isSelected = currentOrder?.id_orden === order.id_orden;
@@ -212,7 +260,14 @@ const CashierView = () => {
                               </span>
                             </div>
                             <span className="text-body-xs text-secondary truncate mt-0.5">
-                              Vend: <strong className="text-on-surface">{order.nombre_vendedora || 'Mostrador'}</strong> · {itemsCount} art.
+                              {(() => {
+                                const info = (order.items || []).find(i => i.is_customer_info);
+                                const cName = info?.customer_name || 'Sin nombre';
+                                const cId = info?.customer_id ? `(${info.customer_id})` : '';
+                                return (
+                                  <>Cli: <strong className="text-on-surface">{cName}</strong> {cId} · Vend: {order.nombre_vendedora || 'Mostrador'}</>
+                                );
+                              })()}
                             </span>
                           </div>
                           <div className="text-right shrink-0">
@@ -285,7 +340,7 @@ const CashierView = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-neutral-border font-body text-body-md">
-                      {(currentOrder.items || []).map((item, idx) => {
+                      {(currentOrder.items || []).filter(i => !i.is_customer_info).map((item, idx) => {
                         const itemPrice = Number(item.precio_unitario || item.price || 0);
                         const itemQty = Number(item.cantidad || item.quantity || 1);
                         const product = products.find(p => p.sku === item.sku);
@@ -351,15 +406,6 @@ const CashierView = () => {
               </div>
 
               <div className="flex flex-col gap-3 font-body">
-                <div className="flex justify-between text-secondary">
-                  <span>Subtotal</span>
-                  <span className="font-code-num text-on-surface">${subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-secondary">
-                  <span>IVA (16%)</span>
-                  <span className="font-code-num text-on-surface">${iva.toFixed(2)}</span>
-                </div>
-                <div className="h-px bg-neutral-border my-1"></div>
                 <div className="flex justify-between items-baseline">
                   <span className="font-headline text-headline-lg text-on-surface">Total a Pagar</span>
                   <span className="font-code-num text-[32px] font-bold text-primary">${total.toFixed(2)}</span>
@@ -593,40 +639,61 @@ const CashierView = () => {
                 <span className="material-symbols-outlined text-[32px]">check</span>
               </div>
               <h2 className="font-headline text-headline-lg text-on-surface">¡Transacción Exitosa!</h2>
-              <p className="font-body text-body-sm text-secondary">Inventario rebajado y ticket digital emitido correctamente.</p>
+              <p className="font-body text-body-sm text-secondary">La venta se procesó correctamente.</p>
             </div>
             
-            <div className="bg-surface-container-low p-4 rounded-xl border border-neutral-border font-code-num text-body-sm flex flex-col gap-2">
-              <div className="text-center pb-2 border-b border-neutral-border border-dashed">
-                <div className="font-bold text-headline-sm">CENTRO TEXTIL EL CASTILLO</div>
-                <div className="text-secondary text-body-xs">Ticket: #{currentOrder.id_orden}</div>
+            {/* The area to print as PDF */}
+            <div id="receipt-content" className="bg-surface-container-lowest p-6 rounded-xl border border-neutral-border font-code-num text-body-sm flex flex-col gap-4">
+              <div className="text-center pb-4 border-b border-neutral-border border-dashed">
+                <h3 className="font-bold text-headline-md text-on-surface">CENTRO TEXTIL EL CASTILLO</h3>
+                <p className="text-secondary text-body-sm mt-1">Factura Comercial</p>
+                <div className="text-secondary text-body-xs mt-2">Ticket: #{currentOrder.id_orden}</div>
               </div>
-              <div className="py-2 flex flex-col gap-1 text-secondary">
-                <div className="flex justify-between"><span>Vendedor:</span> <span className="text-on-surface">{currentOrder.nombre_vendedora}</span></div>
+              
+              <div className="py-2 flex flex-col gap-2 text-secondary">
+                <div className="flex justify-between"><span>Atendido por:</span> <span className="text-on-surface font-semibold">{currentOrder.nombre_vendedora}</span></div>
+                <div className="flex justify-between"><span>Cliente:</span> <span className="text-on-surface font-semibold">{(currentOrder.items || []).find(i => i.is_customer_info)?.customer_name || 'Consumidor Final'}</span></div>
+                <div className="flex justify-between"><span>C.I. / RIF:</span> <span className="text-on-surface">{(currentOrder.items || []).find(i => i.is_customer_info)?.customer_id || 'N/A'}</span></div>
                 <div className="flex justify-between"><span>Fecha:</span> <span className="text-on-surface">{currentOrder.fecha ? new Date(currentOrder.fecha).toLocaleString() : new Date().toLocaleString()}</span></div>
               </div>
-              <div className="py-2 border-t border-b border-neutral-border border-dashed flex flex-col gap-1">
-                {(currentOrder.items || []).map((item, idx) => {
+              
+              <div className="py-4 border-t border-b border-neutral-border border-dashed flex flex-col gap-2">
+                <div className="flex justify-between font-bold text-secondary uppercase text-[10px]">
+                  <span className="w-2/3">Descripción</span>
+                  <span className="w-1/3 text-right">Total</span>
+                </div>
+                {(currentOrder.items || []).filter(i => !i.is_customer_info).map((item, idx) => {
                   const qty = Number(item.cantidad || item.quantity || 1);
                   const name = item.nombre || item.name || 'Producto';
                   const price = Number(item.precio_unitario || item.price || 0);
                   return (
-                    <div key={idx} className="flex justify-between"><span>{qty}x {name.substring(0, 15)}</span> <span className="text-on-surface">${(qty * price).toFixed(2)}</span></div>
+                    <div key={idx} className="flex justify-between items-start text-on-surface">
+                      <span className="w-2/3 pr-2">{qty}x {name} <br/><span className="text-[10px] text-secondary">(${price.toFixed(2)} c/u)</span></span>
+                      <span className="w-1/3 text-right font-semibold">${(qty * price).toFixed(2)}</span>
+                    </div>
                   );
                 })}
               </div>
-              <div className="pt-2 flex flex-col gap-1">
-                <div className="flex justify-between font-bold text-on-surface text-body-lg pt-1"><span>TOTAL PAGADO:</span> <span className="text-primary">${currentOrder.total.toFixed(2)}</span></div>
+              
+              <div className="pt-2 flex flex-col gap-2">
+                <div className="flex justify-between items-center font-bold text-on-surface text-headline-sm pt-2">
+                  <span>TOTAL PAGADO:</span> 
+                  <span className="text-primary">${currentOrder.total.toFixed(2)}</span>
+                </div>
+              </div>
+              
+              <div className="text-center text-[10px] text-secondary mt-4">
+                ¡Gracias por su compra! <br/> Conservar esta factura para cualquier reclamo.
               </div>
             </div>
             
             <div className="flex gap-3">
-              <button onClick={closeReceipt} className="flex-1 bg-surface-container-high hover:bg-neutral-border text-on-surface font-label-lg py-3 rounded-xl transition-all text-center">
+              <button onClick={closeReceipt} className="flex-1 bg-surface-container-high hover:bg-neutral-border text-on-surface font-label-lg py-3 rounded-xl transition-all text-center border border-transparent hover:border-neutral-border">
                 Nueva Venta
               </button>
-              <button onClick={() => { alert('Ticket enviado por WhatsApp con éxito.'); closeReceipt(); }} className="flex-1 bg-primary hover:bg-brand-red-hover text-on-primary font-label-lg py-3 rounded-xl transition-all flex items-center justify-center gap-2">
-                <span className="material-symbols-outlined text-[18px]">share</span>
-                Enviar Digital
+              <button onClick={downloadPDF} className="flex-1 bg-primary hover:bg-brand-red-hover text-on-primary font-label-lg py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm">
+                <span className="material-symbols-outlined text-[18px]">download</span>
+                Descargar PDF
               </button>
             </div>
           </div>

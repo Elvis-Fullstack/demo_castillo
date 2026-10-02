@@ -9,6 +9,8 @@ const SellerView = () => {
   const [cart, setCart] = useState([]);
   const [showScanner, setShowScanner] = useState(false);
   const [generatedOrder, setGeneratedOrder] = useState(null);
+  const [customerName, setCustomerName] = useState('');
+  const [customerId, setCustomerId] = useState('');
 
   const categories = [
     { id: 'all', label: 'Todos' },
@@ -49,15 +51,20 @@ const SellerView = () => {
   };
 
   const subtotal = cart.reduce((sum, item) => sum + (item.cantidad * item.precio_unitario), 0);
-  const iva = subtotal * 0.16;
-  const total = subtotal + iva;
+  const total = subtotal;
 
   const handleCheckout = async () => {
     if (cart.length === 0) return;
-    const orderId = await createOrder(cart, total, 'Ventas Mostrador');
+    if (!customerName.trim()) {
+      alert("Por favor, ingrese el nombre del cliente.");
+      return;
+    }
+    const orderId = await createOrder(cart, total, 'Ventas Mostrador', customerName, customerId);
     if (orderId) {
       setGeneratedOrder(orderId);
       setCart([]);
+      setCustomerName('');
+      setCustomerId('');
     } else {
       alert("Error al generar la pre-orden");
     }
@@ -286,21 +293,38 @@ const SellerView = () => {
                 </div>
 
                 <div className="flex flex-col gap-2 pt-2 border-t border-neutral-border">
-                  <div className="flex justify-between text-body-md text-on-surface-variant">
-                    <span>Subtotal</span>
-                    <span className="text-code-num text-on-surface">${subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-body-md text-on-surface-variant">
-                    <span>Impuestos (IVA 16%)</span>
-                    <span className="text-code-num text-on-surface">${iva.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-headline-md text-on-surface pt-2 border-t border-dashed border-neutral-border">
+                  <div className="flex justify-between text-headline-md text-on-surface pt-2">
                     <span>Total Pre-Orden</span>
                     <span className="text-code-num text-brand-red font-bold text-xl">${total.toFixed(2)}</span>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 pt-4">
+                {/* Nuevos campos de información del cliente */}
+                <div className="flex flex-col gap-3 py-3 border-t border-neutral-border">
+                  <div>
+                    <label className="block text-label-sm font-bold text-on-surface mb-1">Nombre del Cliente *</label>
+                    <input 
+                      type="text" 
+                      className="w-full bg-surface-container-low border border-neutral-border rounded-lg px-3 py-2 text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="Ej. Juan Pérez"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-label-sm font-bold text-on-surface mb-1">Cédula / ID (Opcional)</label>
+                    <input 
+                      type="text" 
+                      className="w-full bg-surface-container-low border border-neutral-border rounded-lg px-3 py-2 text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="Ej. V-12345678"
+                      value={customerId}
+                      onChange={(e) => setCustomerId(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-2 pt-2">
                   <button 
                     disabled={cart.length === 0}
                     onClick={handleCheckout}
