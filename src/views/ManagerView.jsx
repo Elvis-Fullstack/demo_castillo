@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import AddProductForm from '../components/AddProductForm';
 import AddEmployeeForm from '../components/AddEmployeeForm';
+import ProductLabelModal from '../components/ProductLabelModal';
 
 const ManagerView = () => {
   const { products, replenishStock } = useStore();
@@ -12,6 +13,8 @@ const ManagerView = () => {
   const [selectedItems, setSelectedItems] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showAddEmployeeForm, setShowAddEmployeeForm] = useState(false);
+  // null = cerrado | { product: null } = elegir producto | { product } = producto concreto
+  const [labelModal, setLabelModal] = useState(null);
 
   const getStatus = (stock, min) => {
     if (stock <= 0) return 'critical';
@@ -127,6 +130,13 @@ const ManagerView = () => {
             {showAddEmployeeForm ? 'Cerrar Empleado' : 'Registrar Empleado'}
           </button>
           <button 
+            id="open-label-generator"
+            onClick={() => setLabelModal({ product: null })}
+            className="w-full md:w-auto bg-surface-container-high text-on-surface hover:bg-neutral-border px-4 py-2 rounded-lg text-label-lg transition-all flex items-center justify-center gap-2 shadow-sm border border-neutral-border">
+            <span className="material-symbols-outlined text-[18px] text-brand-red">sell</span>
+            Crear Etiqueta
+          </button>
+          <button 
             onClick={handleMassReplenish}
             className="w-full md:w-auto bg-primary text-on-primary hover:bg-brand-red-hover px-4 py-2 rounded-lg text-label-lg transition-all flex items-center justify-center gap-2 shadow-sm"
           >
@@ -176,7 +186,18 @@ const ManagerView = () => {
                     <span className={`px-2.5 py-0.5 rounded-full text-label-sm font-bold ${badgeBg} ${badgeText} border ${badgeBorder} flex items-center gap-1.5`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${dotBg} ${isCritical ? 'animate-ping' : ''}`}></span> {titleLabel}
                     </span>
-                    <span className="text-code-num text-on-surface-variant">SKU: {p.sku}</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-code-num text-on-surface-variant">SKU: {p.sku}</span>
+                      <button
+                        id={`label-btn-${p.id}`}
+                        onClick={() => setLabelModal({ product: p })}
+                        title="Crear etiqueta"
+                        aria-label={`Crear etiqueta de ${p.name}`}
+                        className="p-1 rounded-md text-on-surface-variant hover:text-brand-red hover:bg-brand-red-subtle transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">sell</span>
+                      </button>
+                    </div>
                   </div>
                   <h3 className="text-headline-md text-on-surface font-headline mb-1">{p.name}</h3>
                   
@@ -287,6 +308,15 @@ const ManagerView = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Generador de etiquetas */}
+      {labelModal && (
+        <ProductLabelModal
+          products={products}
+          initialProduct={labelModal.product}
+          onClose={() => setLabelModal(null)}
+        />
       )}
     </div>
   );
