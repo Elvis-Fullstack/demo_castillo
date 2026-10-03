@@ -3,6 +3,22 @@ import { useStore } from '../context/StoreContext';
 import { QRCodeSVG } from 'qrcode.react';
 import CameraScanner from '../components/CameraScanner';
 
+// Normaliza lo que entrega el lector/cámara: "SKU: 12313", "sku 12313", "SKU-12313\n", etc.
+const normalizeSku = (raw) =>
+  String(raw ?? '')
+    .replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200D\uFEFF]/g, '') // caracteres invisibles / de control
+    .trim()
+    .replace(/^SKU\s*[:#\-]?\s*/i, '')
+    .trim();
+
+const skuKey = (value) => String(value ?? '').replace(/\s+/g, '').toLowerCase();
+
+const findProductBySku = (products, raw) => {
+  const key = skuKey(normalizeSku(raw));
+  if (!key) return null;
+  return products.find(p => skuKey(p.sku) === key) || null;
+};
+
 const SellerView = () => {
   const { products, createOrder } = useStore();
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,9 +38,9 @@ const SellerView = () => {
       if (!rawSearch) return;
 
       // Limpiamos el texto por si el lector ingresó "SKU:12345"
-      const skuToSearch = rawSearch.replace(/^SKU:\s*/i, '').trim();
+      const skuToSearch = normalizeSku(rawSearch);
 
-      const productFound = products.find(p => String(p.sku) === skuToSearch);
+      const productFound = findProductBySku(products, rawSearch);
       
       if (productFound) {
         addToCart(productFound);
@@ -51,9 +67,9 @@ const SellerView = () => {
     if (!scannedText) return;
 
     // Si el código viene con el formato "SKU:12345", extraemos solo el número
-    const cleanSku = scannedText.replace(/^SKU:\s*/i, '').trim();
+    const cleanSku = normalizeSku(scannedText);
     
-    const productFound = products.find(p => String(p.sku) === cleanSku);
+    const productFound = findProductBySku(products, scannedText);
     
     if (productFound) {
       addToCart(productFound);
