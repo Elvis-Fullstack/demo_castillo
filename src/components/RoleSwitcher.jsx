@@ -24,7 +24,7 @@ export const TopHeader = () => {
     <header className="fixed top-0 w-full z-50 bg-neutral-charcoal text-white shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
       <div className="h-16 max-w-7xl mx-auto px-gutter-desktop flex items-center justify-between">
         <div className="flex items-center gap-space-md">
-          <img alt="logo" className="h-8 w-auto object-contain bg-white rounded p-1" src="https://lh3.googleusercontent.com/aida/AEtjO1WmBycaYMuGQLI6zee_3pYw3T1580H-w1pad6niCOMcoW2JDkwioszFyTLFJbs52dHwactjXULIQCHkBBTYYY4Zh4g75-VsVA3nwONEnlfON7qPYJx_3B8OO0CUhKJJLW-ID9N8JXBg0jVmAqd5KXSLsm7fFktbc4UhDbpbEqQgP4bPcH_tknw80aHEZWcWlhEtdzVyMre7hejYGFpGJgM3NRCy0UjP3cn1epPR5NKK_V2JuTxMDM1oForGGPu3Pm6FHvPrZ484lOw" />
+          <img alt="logo" className="h-8 w-auto object-contain bg-white rounded p-1" src="/demo_castillo/logo.png" />
           <span className="text-headline-md font-headline tracking-tight text-white hidden sm:block">El Castillo - Centro Textil</span>
         </div>
         <nav className="hidden md:flex items-center gap-space-md">

@@ -36,10 +36,12 @@ export default function LoginView({ onLoginSuccess }) {
   return (
     <div className="flex items-center justify-center min-h-screen bg-surface p-4">
       <div className="w-full max-w-md p-8 space-y-6 bg-surface-container-lowest rounded-2xl shadow-lg border border-neutral-border">
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto bg-primary rounded-xl flex items-center justify-center mb-4">
-             <span className="material-symbols-outlined text-on-primary text-[32px]">storefront</span>
-          </div>
+        <div className="text-center flex flex-col items-center">
+          <img 
+            alt="El Castillo Logo" 
+            src="/demo_castillo/logo.png" 
+            className="w-32 h-32 object-contain rounded-full shadow-md mb-4 bg-white"
+          />
           <h2 className="text-headline-xl font-headline text-on-surface">El Castillo</h2>
           <p className="mt-2 text-body-md text-secondary">Inicia sesión para acceder al sistema</p>
         </div>

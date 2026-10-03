@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useStore } from '../context/StoreContext';
 import { QRCodeSVG } from 'qrcode.react';
+import CameraScanner from '../components/CameraScanner';
 
 const SellerView = () => {
   const { products, createOrder } = useStore();
@@ -11,6 +12,57 @@ const SellerView = () => {
   const [generatedOrder, setGeneratedOrder] = useState(null);
   const [customerName, setCustomerName] = useState('');
   const [customerId, setCustomerId] = useState('');
+  const searchInputRef = useRef(null);
+  const [scannerError, setScannerError] = useState('');
+
+  const handleScannerInput = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const rawSearch = searchTerm.trim();
+      if (!rawSearch) return;
+
+      // Limpiamos el texto por si el lector ingresó "SKU:12345"
+      const skuToSearch = rawSearch.replace(/^SKU:\s*/i, '').trim();
+
+      const productFound = products.find(p => String(p.sku) === skuToSearch);
+      
+      if (productFound) {
+        addToCart(productFound);
+        setSearchTerm('');
+        setScannerError('');
+      } else {
+        setScannerError(`Producto con SKU "${skuToSearch}" no encontrado.`);
+        setSearchTerm('');
+        setTimeout(() => setScannerError(''), 3000);
+      }
+      
+      // Asegurar que el input mantenga el foco para escanear el siguiente
+      setTimeout(() => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      }, 0);
+    }
+  };
+
+  const handleCameraScan = (scannedText) => {
+    setShowScanner(false); // Cerramos el modal de la cámara
+    
+    if (!scannedText) return;
+
+    // Si el código viene con el formato "SKU:12345", extraemos solo el número
+    const cleanSku = scannedText.replace(/^SKU:\s*/i, '').trim();
+    
+    const productFound = products.find(p => String(p.sku) === cleanSku);
+    
+    if (productFound) {
+      addToCart(productFound);
+      setScannerError('');
+    } else {
+      setScannerError(`Producto escaneado "${cleanSku}" no encontrado.`);
+      setTimeout(() => setScannerError(''), 3000);
+    }
+  };
 
   const categories = [
     { id: 'all', label: 'Todos' },
@@ -118,11 +170,13 @@ const SellerView = () => {
                 <span className="material-symbols-outlined">search</span>
               </span>
               <input 
+                ref={searchInputRef}
                 className="w-full pl-10 pr-12 py-2.5 bg-surface-container-low rounded-lg text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-brand-red border border-neutral-border"
                 type="text"
                 placeholder="Buscar por EAN, SKU, Nombre o Referencia..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={handleScannerInput}
               />
               <button 
                 className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-secondary hover:text-brand-red transition-colors"
@@ -131,6 +185,12 @@ const SellerView = () => {
                 <span className="material-symbols-outlined">photo_camera</span>
               </button>
             </div>
+            
+            {scannerError && (
+              <div className="bg-brand-red-subtle text-brand-red px-3 py-2 rounded-md text-label-sm font-bold animate-pulse">
+                {scannerError}
+              </div>
+            )}
             
             {/* Filter Chips */}
             <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
@@ -361,13 +421,13 @@ const SellerView = () => {
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
-            <div className="relative w-full h-64 bg-neutral-charcoal rounded-xl overflow-hidden flex items-center justify-center border-2 border-dashed border-brand-red/60">
-              <div className="absolute w-48 h-32 border-2 border-traffic-yellow rounded-lg flex items-center justify-center animate-pulse">
-                <span className="text-white text-xs bg-black/70 px-2 py-1 rounded">Apunte al Código</span>
-              </div>
+            
+            <div className="w-full flex items-center justify-center bg-surface-container-low rounded-xl">
+              <CameraScanner onScanSuccess={handleCameraScan} />
             </div>
+
             <button className="w-full bg-secondary text-on-secondary py-2.5 rounded-lg text-label-md hover:bg-neutral-charcoal transition-all" onClick={() => setShowScanner(false)}>
-              Cerrar Cámara
+              Cancelar
             </button>
           </div>
         </div>

@@ -36,7 +36,7 @@ export default function Header({ currentUser, onLogout }) {
         </button>
         {/* FIN ESTILOS EXCLUSIVOS PARA MÓVIL */}
         
-        <img alt="logo" className="h-8 w-auto object-contain bg-white rounded p-1" src="https://lh3.googleusercontent.com/aida/AEtjO1WmBycaYMuGQLI6zee_3pYw3T1580H-w1pad6niCOMcoW2JDkwioszFyTLFJbs52dHwactjXULIQCHkBBTYYY4Zh4g75-VsVA3nwONEnlfON7qPYJx_3B8OO0CUhKJJLW-ID9N8JXBg0jVmAqd5KXSLsm7fFktbc4UhDbpbEqQgP4bPcH_tknw80aHEZWcWlhEtdzVyMre7hejYGFpGJgM3NRCy0UjP3cn1epPR5NKK_V2JuTxMDM1oForGGPu3Pm6FHvPrZ484lOw" />
+        <img alt="logo" className="h-8 w-auto object-contain bg-white rounded p-1" src="/demo_castillo/logo.png" />
         <h1 className="text-xl font-headline font-bold tracking-tight text-white hidden sm:block">El Castillo - Centro Textil</h1>
       </div>
       
