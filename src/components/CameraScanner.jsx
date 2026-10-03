@@ -15,32 +15,24 @@ const CameraScanner = ({ onScanSuccess }) => {
         if (devices && devices.length > 0) {
           setPermissionStatus('granted');
           
-          const startScanner = (cameraConfig) => {
-            scanner.start(
-              cameraConfig,
-              { fps: 10, qrbox: { width: 250, height: 250 } },
-              (decodedText) => {
-                if (scanner.isScanning) {
-                  scanner.stop().then(() => {
-                    onScanSuccess(decodedText);
-                  }).catch(() => {
-                    onScanSuccess(decodedText);
-                  });
-                }
-              },
-              (errorMessage) => {}
-            ).catch((err) => {
-              // Si falla al intentar usar la cámara trasera, intentamos con la primera disponible
-              if (cameraConfig.facingMode === "environment") {
-                startScanner(devices[0].id);
-              } else {
-                setPermissionStatus('denied');
+          scanner.start(
+            { facingMode: { exact: "environment" } },
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            (decodedText) => {
+              if (scanner.isScanning) {
+                scanner.stop().then(() => {
+                  onScanSuccess(decodedText);
+                }).catch(() => {
+                  onScanSuccess(decodedText);
+                });
               }
-            });
-          };
-
-          // Intentamos iniciar con la cámara trasera primero
-          startScanner({ facingMode: "environment" });
+            },
+            (errorMessage) => {}
+          ).catch((err) => {
+            // Si el dispositivo no tiene cámara trasera (environment exacto) o falla, 
+            // no caemos en la frontal, simplemente denegamos y mostramos error.
+            setPermissionStatus('denied');
+          });
         } else {
           setPermissionStatus('denied');
         }
