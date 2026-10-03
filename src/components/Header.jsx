@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 
 export default function Header({ currentUser, onLogout }) {
   const { currentRole, setCurrentRole } = useStore();
+  
+  // INICIO ESTILOS EXCLUSIVOS PARA MÓVIL (Estado del menú)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  // FIN ESTILOS EXCLUSIVOS PARA MÓVIL
 
   const roleNames = {
     seller: 'Ventas',
@@ -21,6 +25,17 @@ export default function Header({ currentUser, onLogout }) {
   return (
     <header className="flex items-center justify-between px-6 py-3 bg-neutral-charcoal shadow-[0_1px_8px_rgba(0,0,0,0.04)] border-b border-neutral-charcoal z-50 fixed top-0 w-full">
       <div className="flex items-center gap-3">
+        {/* INICIO ESTILOS EXCLUSIVOS PARA MÓVIL (Botón Hamburguesa) */}
+        <button 
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className="md:hidden text-white p-1 -ml-2 rounded-lg hover:bg-white/10 transition-colors flex items-center justify-center"
+        >
+          <span className="material-symbols-outlined text-2xl">
+            {isMobileMenuOpen ? 'close' : 'menu'}
+          </span>
+        </button>
+        {/* FIN ESTILOS EXCLUSIVOS PARA MÓVIL */}
+        
         <img alt="logo" className="h-8 w-auto object-contain bg-white rounded p-1" src="https://lh3.googleusercontent.com/aida/AEtjO1WmBycaYMuGQLI6zee_3pYw3T1580H-w1pad6niCOMcoW2JDkwioszFyTLFJbs52dHwactjXULIQCHkBBTYYY4Zh4g75-VsVA3nwONEnlfON7qPYJx_3B8OO0CUhKJJLW-ID9N8JXBg0jVmAqd5KXSLsm7fFktbc4UhDbpbEqQgP4bPcH_tknw80aHEZWcWlhEtdzVyMre7hejYGFpGJgM3NRCy0UjP3cn1epPR5NKK_V2JuTxMDM1oForGGPu3Pm6FHvPrZ484lOw" />
         <h1 className="text-xl font-headline font-bold tracking-tight text-white hidden sm:block">El Castillo - Centro Textil</h1>
       </div>
@@ -64,6 +79,29 @@ export default function Header({ currentUser, onLogout }) {
           </button>
         </div>
       )}
+
+      {/* INICIO ESTILOS EXCLUSIVOS PARA MÓVIL (Menú Desplegable) */}
+      {isMobileMenuOpen && (
+        <div className="absolute top-full left-0 w-full bg-neutral-charcoal border-b border-white/10 shadow-xl md:hidden flex flex-col py-2">
+          {areas.map((area) => (
+            <button
+              key={area.id}
+              onClick={() => {
+                setCurrentRole(area.id);
+                setIsMobileMenuOpen(false); // Cerramos el menú al seleccionar una opción
+              }}
+              className={`text-left px-6 py-4 text-base font-bold transition-colors ${
+                currentRole === area.id 
+                  ? 'bg-brand-red text-white' 
+                  : 'text-secondary-fixed hover:text-white hover:bg-white/5'
+              }`}
+            >
+              {area.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {/* FIN ESTILOS EXCLUSIVOS PARA MÓVIL */}
     </header>
   );
 }
