@@ -26,7 +26,7 @@ const qrboxFunction = (viewfinderWidth, viewfinderHeight) => {
 };
 
 const CameraScanner = ({ onScanSuccess }) => {
-  const [permissionStatus, setPermissionStatus] = useState('requesting'); // 'requesting', 'granted', 'denied'
+  const [permissionStatus, setPermissionStatus] = useState('requesting'); // 'requesting', 'granted', 'denied', 'unavailable'
   const [manualCode, setManualCode] = useState('');
   const scannerRef = useRef(null);
   const handledRef = useRef(false);
@@ -89,7 +89,9 @@ const CameraScanner = ({ onScanSuccess }) => {
       );
     } catch (err) {
       console.error('Error al iniciar la cámara:', err);
-      setPermissionStatus('denied');
+      const errText = `${err?.name || ''} ${err?.message || err || ''}`;
+      // Sin permiso -> instrucciones del candado. Otro fallo -> no hay cámara trasera o está en uso.
+      setPermissionStatus(/NotAllowed|Permission|denied/i.test(errText) ? 'denied' : 'unavailable');
     }
   };
 
@@ -136,6 +138,24 @@ const CameraScanner = ({ onScanSuccess }) => {
               className="px-4 py-2 bg-brand-red text-on-primary rounded-lg text-label-md font-bold hover:bg-brand-red-hover transition-colors"
             >
               Ya le di permiso, reintentar
+            </button>
+          </div>
+        )}
+
+        {permissionStatus === 'unavailable' && (
+          <div className="flex flex-col items-center gap-4 p-6 text-center">
+            <span className="material-symbols-outlined text-4xl text-on-surface-variant">videocam_off</span>
+            <div>
+              <p className="text-body-lg font-bold text-on-surface">Cámara trasera no disponible</p>
+              <p className="text-body-sm text-on-surface-variant mt-2">
+                Este dispositivo no tiene cámara trasera o la está usando otra aplicación. Ciérrala y reintenta, o escribe el SKU abajo.
+              </p>
+            </div>
+            <button
+              onClick={initCamera}
+              className="px-4 py-2 bg-brand-red text-on-primary rounded-lg text-label-md font-bold hover:bg-brand-red-hover transition-colors"
+            >
+              Reintentar
             </button>
           </div>
         )}

@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line
 } from 'recharts';
-import { Upload, TrendingUp, AlertOctagon, DollarSign, Edit, Trash2, Save, X } from 'lucide-react';
+import { TrendingUp, AlertOctagon, DollarSign, Edit, Trash2, Save, X } from 'lucide-react';
 import TrafficLight from '../components/TrafficLight';
 import WorkersManagement from '../components/WorkersManagement';
 
 const AdminDashboard = () => {
-  const { products, orders, importProducts, updateProduct, deleteProduct } = useStore();
+  const { products, orders, updateProduct, deleteProduct } = useStore();
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
 

@@ -6,9 +6,9 @@ import CameraScanner from '../components/CameraScanner';
 // Normaliza lo que entrega el lector/cámara: "SKU: 12313", "sku 12313", "SKU-12313\n", etc.
 const normalizeSku = (raw) =>
   String(raw ?? '')
-    .replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200D\uFEFF]/g, '') // caracteres invisibles / de control
+    .replace(/[\p{Cc}\p{Cf}]/gu, '') // caracteres invisibles / de control (\n, \r, BOM, zero-width…)
     .trim()
-    .replace(/^SKU\s*[:#\-]?\s*/i, '')
+    .replace(/^SKU\s*[:#-]?\s*/i, '')
     .trim();
 
 const skuKey = (value) => String(value ?? '').replace(/\s+/g, '').toLowerCase();

@@ -236,7 +236,6 @@ const CashierView = () => {
                     .sort((a, b) => new Date(b.fecha || 0) - new Date(a.fecha || 0))
                     .map((order) => {
                       const isSelected = currentOrder?.id_orden === order.id_orden;
-                      const itemsCount = (order.items || []).reduce((sum, item) => sum + (item.cantidad || 1), 0);
                       return (
                         <div
                           key={order.id_orden}
@@ -511,7 +510,9 @@ const CashierView = () => {
             <div className="flex flex-col gap-3">
               {paidOrders.map(order => {
                 const isExpanded = expandedPaidOrder === order.id_orden;
-                const itemsCount = (order.items || []).reduce((sum, item) => sum + (item.cantidad || 1), 0);
+                const itemsCount = (order.items || [])
+                  .filter(item => !item.is_customer_info)
+                  .reduce((sum, item) => sum + (Number(item.cantidad) || 0), 0);
                 const orderDate = order.fecha || order.created_at;
 
                 return (
